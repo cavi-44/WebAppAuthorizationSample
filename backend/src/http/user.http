@@ -1,0 +1,31 @@
+### 1. Rejestracja Admina
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "login": "admin",
+  "haslo": "trudneHaslo"
+}
+
+### 2. Rejestracja zwykłego użytkownika (do testowania własności zasobów)
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "login": "student",
+  "haslo": "prosteHaslo"
+}
+
+### 3. Logowanie Admina (Token zapisze się automatycznie!)
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "login": "admin",
+  "haslo": "trudneHaslo"
+}
+
+> {%
+    // Magia IntelliJ: zapisuje token z odpowiedzi do zmiennej pamięci
+    client.global.set("token", response.body);
+%}

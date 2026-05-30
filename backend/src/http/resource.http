@@ -1,0 +1,12 @@
+POST http://localhost:8080/api/resources
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Dokumentacja JWT",
+  "content": "Notatki z budowy bezpiecznego backendu."
+}
+
+### 2. Usunięcie zasobu o ID 1
+DELETE http://localhost:8080/api/resources/1
+Authorization: Bearer {{token}}
