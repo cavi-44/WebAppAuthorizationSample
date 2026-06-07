@@ -1,7 +1,6 @@
 package org.example.backend.model;
 
 import jakarta.persistence.*;
-
 import java.time.LocalDateTime;
 
 @Entity
@@ -11,10 +10,32 @@ public class Resource {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private String title;
-    private String content;
+
+    @Column(nullable = false, length = 2000)
+    private String description;
+
+    @Column(nullable = false)
     private Long authorId;
+
+    @Column(nullable = false)
     private LocalDateTime creationDate = LocalDateTime.now();
+
+    @Column(nullable = false)
+    private boolean isPrivate; // true = for group (team), false = for all (public)
+
+    public Resource() {
+    }
+
+    public Resource(Long id, String title, String description, Long authorId, LocalDateTime creationDate, boolean isPrivate) {
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.authorId = authorId;
+        this.creationDate = creationDate;
+        this.isPrivate = isPrivate;
+    }
 
     public Long getId() {
         return id;
@@ -32,12 +53,12 @@ public class Resource {
         this.title = title;
     }
 
-    public String getContent() {
-        return content;
+    public String getDescription() {
+        return description;
     }
 
-    public void setContent(String description) {
-        this.content = description;
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public Long getAuthorId() {
@@ -54,5 +75,13 @@ public class Resource {
 
     public void setCreationDate(LocalDateTime creationDate) {
         this.creationDate = creationDate;
+    }
+
+    public boolean isPrivate() {
+        return isPrivate;
+    }
+
+    public void setPrivate(boolean isPrivate) {
+        this.isPrivate = isPrivate;
     }
 }
