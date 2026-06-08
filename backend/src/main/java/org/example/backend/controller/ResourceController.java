@@ -131,21 +131,23 @@ public class ResourceController {
         try {
             Long currentUserId = Long.parseLong(authentication.getName());
             
-            if (request.title == null || request.title.trim().isEmpty() ||
-                request.description == null || request.description.trim().isEmpty()) {
+            if (request.getTitle() == null || request.getTitle().trim().isEmpty() ||
+                request.getDescription() == null || request.getDescription().trim().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Title and description are required"));
             }
 
             Resource resource = new Resource();
-            resource.setTitle(request.title);
-            resource.setDescription(request.description);
+            resource.setTitle(request.getTitle());
+            resource.setDescription(request.getDescription());
             resource.setAuthorId(currentUserId);
-            resource.setPrivate(request.isPrivate != null && request.isPrivate);
+            resource.setPrivate(request.getPrivate() != null && request.getPrivate());
 
             resourceRepository.save(resource);
             return ResponseEntity.ok(Map.of("message", "Created successfully"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Error creating post"));
+        }
+    }
     // Ekstrakcja i weryfikacja tokena z własną obsługą wyjątków
     private Claims verifyToken(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -167,20 +169,22 @@ public class ResourceController {
     }
 
     // Jawna metoda walidująca zasoby chroniąca przed XSS i DoS
-    private void validateResourceData(ResourceRequest request) {
+    private ResponseEntity<?> validateResourceData(ResourceRequest request) {
         if (request.getTitle() == null || !TITLE_PATTERN.matcher(request.getTitle()).matches()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Title must be between 3 and 100 characters long and cannot contain HTML tags (< or >)");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Title must be between 3 and 100 characters long and cannot contain HTML tags (< or >)")
+            );
         }
 
-        if (request.getContent() == null || request.getContent().trim().isEmpty() || request.getContent().length() > 2000) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Content cannot be empty and must not exceed 2000 characters");
+        if (request.getDescription() == null || request.getDescription().trim().isEmpty() || request.getDescription().length() > 2000) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "\"Content cannot be empty and must not exceed 2000 characters\"")
+            );
         }
+
+        return null;
     }
 
     @PostMapping
-    public ResponseEntity<String> createResource(
+    public ResponseEntity<?> createResource(
             @RequestHeader("Authorization") String authHeader,
             @RequestBody ResourceRequest request) {
 
@@ -189,12 +193,15 @@ public class ResourceController {
         Long userId = Long.parseLong(claims.getSubject());
 
         // 2. Jawna walidacja struktury danych wejściowych
-        validateResourceData(request);
+        ResponseEntity<?> valid = validateResourceData(request);
+        if (valid != null){
+            return valid;
+        }
 
         // 3. Budowa i zapis obiektu
         Resource resource = new Resource();
         resource.setTitle(request.getTitle());
-        resource.setContent(request.getContent());
+        resource.setDescription(request.getDescription());
         resource.setAuthorId(userId);
 
         resourceRepository.save(resource);
@@ -225,11 +232,11 @@ public class ResourceController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "No permission to edit this post"));
             }
 
-            if (request.title != null && !request.title.trim().isEmpty()) {
-                resource.setTitle(request.title);
+            if (request.getTitle() != null && !request.getTitle().trim().isEmpty()) {
+                resource.setTitle(request.getTitle());
             }
-            if (request.description != null && !request.description.trim().isEmpty()) {
-                resource.setDescription(request.description);
+            if (request.getDescription() != null && !request.getDescription().trim().isEmpty()) {
+                resource.setDescription(request.getDescription());
             }
 
             resourceRepository.save(resource);
