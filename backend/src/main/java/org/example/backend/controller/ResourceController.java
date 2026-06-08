@@ -1,5 +1,8 @@
 package org.example.backend.controller;
-
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.SignatureException;
 import org.example.backend.model.Resource;
 import org.example.backend.model.User;
 import org.example.backend.repository.ResourceRepository;
@@ -9,12 +12,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
 import java.util.stream.Collectors;
+import java.util.regex.Pattern;
+
 
 @RestController
 @RequestMapping("/api/resources")
@@ -22,6 +29,10 @@ public class ResourceController {
 
     private final ResourceRepository resourceRepository;
     private final UserRepository userRepository;
+
+
+    // Zabezpiecza tytuł: od 3 do 100 znaków, całkowity zakaz nawiasów < i >
+    private static final Pattern TITLE_PATTERN = Pattern.compile("^[^<>]{3,100}$");
 
     public ResourceController(ResourceRepository resourceRepository, UserRepository userRepository) {
         this.resourceRepository = resourceRepository;
@@ -116,22 +127,81 @@ public class ResourceController {
         try {
             Long currentUserId = Long.parseLong(authentication.getName());
             
-            if (request.title == null || request.title.trim().isEmpty() ||
-                request.description == null || request.description.trim().isEmpty()) {
+            if (request.getTitle() == null || request.getTitle().trim().isEmpty() ||
+                request.getDescription() == null || request.getDescription().trim().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Title and description are required"));
             }
 
             Resource resource = new Resource();
-            resource.setTitle(request.title);
-            resource.setDescription(request.description);
+            resource.setTitle(request.getTitle());
+            resource.setDescription(request.getDescription());
             resource.setAuthorId(currentUserId);
-            resource.setPrivate(request.isPrivate != null && request.isPrivate);
+            resource.setPrivate(request.getPrivate() != null && request.getPrivate());
 
             resourceRepository.save(resource);
             return ResponseEntity.ok(Map.of("message", "Created successfully"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Error creating post"));
         }
+    }
+    // Ekstrakcja i weryfikacja tokena z własną obsługą wyjątków
+    private Claims verifyToken(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing or invalid token format");
+        }
+
+        String token = authHeader.substring(7);
+
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(SECRET_KEY.getBytes())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+        } catch (ExpiredJwtException | SignatureException | IllegalArgumentException e) {
+            // Bezpiecznie wyłapuje specyficzne błędy biblioteki jjwt i przekuwa je w czytelny błąd 401
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token is invalid or expired");
+        }
+    }
+
+    // Jawna metoda walidująca zasoby chroniąca przed XSS i DoS
+    private ResponseEntity<?> validateResourceData(ResourceRequest request) {
+        if (request.getTitle() == null || !TITLE_PATTERN.matcher(request.getTitle()).matches()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Title must be between 3 and 100 characters long and cannot contain HTML tags (< or >)")
+            );
+        }
+
+        if (request.getDescription() == null || request.getDescription().trim().isEmpty() || request.getDescription().length() > 2000) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "\"Content cannot be empty and must not exceed 2000 characters\"")
+            );
+        }
+
+        return null;
+    }
+
+    @PostMapping
+    public ResponseEntity<?> createResource(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody ResourceRequest request) {
+
+        // 1. Walidacja tożsamości
+        Claims claims = verifyToken(authHeader);
+        Long userId = Long.parseLong(claims.getSubject());
+
+        // 2. Jawna walidacja struktury danych wejściowych
+        ResponseEntity<?> valid = validateResourceData(request);
+        if (valid != null){
+            return valid;
+        }
+
+        // 3. Budowa i zapis obiektu
+        Resource resource = new Resource();
+        resource.setTitle(request.getTitle());
+        resource.setDescription(request.getDescription());
+        resource.setAuthorId(userId);
+
+        resourceRepository.save(resource);
+        return ResponseEntity.status(HttpStatus.CREATED).body("Resource created successfully");
     }
 
     @PutMapping("/{id}")
@@ -157,11 +227,11 @@ public class ResourceController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "No permission to edit this post"));
             }
 
-            if (request.title != null && !request.title.trim().isEmpty()) {
-                resource.setTitle(request.title);
+            if (request.getTitle() != null && !request.getTitle().trim().isEmpty()) {
+                resource.setTitle(request.getTitle());
             }
-            if (request.description != null && !request.description.trim().isEmpty()) {
-                resource.setDescription(request.description);
+            if (request.getDescription() != null && !request.getDescription().trim().isEmpty()) {
+                resource.setDescription(request.getDescription());
             }
 
             resourceRepository.save(resource);
