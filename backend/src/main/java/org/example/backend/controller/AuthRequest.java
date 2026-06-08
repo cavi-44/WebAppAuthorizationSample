@@ -3,7 +3,7 @@ package org.example.backend.controller;
 public class AuthRequest {
     private String login;
     private String password;
-
+    private Long teamId;
     public String getLogin() {
         return login;
     }
@@ -19,4 +19,15 @@ public class AuthRequest {
     public void setPassword(String password) {
         this.password = password;
     }
+
+    public int getTeamId(){
+      return teamId;
+    }
+    
+    public void setTeamId(Long teamId){
+        this.teamId = teamId;
+    }
+    
+
 }
+

@@ -1,5 +1,6 @@
 package org.example.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 @Entity
@@ -13,19 +14,26 @@ public class User {
     private String login;
 
     @Column(nullable = false)
-    private String password; // tu trafi hash
+    @JsonIgnore
+    private String password; // hashed password
 
-    private String role; // np. "USER", "ADMIN"
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "role_name", nullable = false)
+    private Role role;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "team_id", nullable = true)
+    private Team team;
 
     public User() {
-
     }
 
-    public User(Long id, String login, String password, String role) {
+    public User(Long id, String login, String password, Role role, Team team) {
         this.id = id;
         this.login = login;
         this.password = password;
         this.role = role;
+        this.team = team;
     }
 
     public Long getId() {
@@ -52,11 +60,19 @@ public class User {
         this.password = password;
     }
 
-    public String getRole() {
+    public Role getRole() {
         return role;
     }
 
-    public void setRole(String role) {
+    public void setRole(Role role) {
         this.role = role;
+    }
+
+    public Team getTeam() {
+        return team;
+    }
+
+    public void setTeam(Team team) {
+        this.team = team;
     }
 }
