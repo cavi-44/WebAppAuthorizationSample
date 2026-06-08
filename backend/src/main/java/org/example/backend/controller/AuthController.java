@@ -99,10 +99,6 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest request) {
-        ResponseEntity<?> valid = validateRegistrationData(request);
-        if (valid != null){
-            return valid;
-        }
         if (request.getLogin() == null || request.getLogin().trim().isEmpty() ||
                 request.getPassword() == null || request.getPassword().trim().isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Login and password are required"));
