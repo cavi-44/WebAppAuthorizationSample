@@ -3,6 +3,7 @@ package org.example.backend.controller;
 import org.example.backend.model.Role;
 import org.example.backend.model.Team;
 import org.example.backend.model.User;
+import org.springframework.beans.factory.annotation.Value;
 import org.example.backend.repository.RoleRepository;
 import org.example.backend.repository.TeamRepository;
 import org.example.backend.repository.UserRepository;
@@ -29,7 +30,8 @@ public class AuthController {
     private final TeamRepository teamRepository;
     private final RoleRepository roleRepository;
     
-    private final String SECRET_KEY = "BardzoTajnyKluczZabezpieczajacyTokenyWymagajacyMinimum256Bitow!!";
+    @Value("${security.jwt.secret}")
+    private String secretKey;
 
     public AuthController(UserRepository userRepository, TeamRepository teamRepository, RoleRepository roleRepository) {
         this.userRepository = userRepository;
@@ -57,8 +59,7 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Selected team does not exist"));
         }
 
-        Role defaultRole = roleRepository.findById("ROLE_USER")
-                .orElseGet(() -> roleRepository.save(new Role("ROLE_USER")));
+        Role defaultRole = roleRepository.findById("ROLE_USER").orElseGet(() -> roleRepository.save(new Role("ROLE_USER")));
 
         User newUser = new User();
         newUser.setLogin(request.login);
@@ -67,6 +68,7 @@ public class AuthController {
         newUser.setTeam(teamOpt.get());
 
         userRepository.save(newUser);
+
         return ResponseEntity.ok(Map.of("message", "Registered successfully"));
     }
 
@@ -87,7 +89,7 @@ public class AuthController {
                     .claim("role", user.getRole().getName())
                     .setIssuedAt(new Date())
                     .setExpiration(new Date(System.currentTimeMillis() + 86400000)) // 1 day expiration
-                    .signWith(SignatureAlgorithm.HS256, SECRET_KEY.getBytes())
+                    .signWith(SignatureAlgorithm.HS256, secretKey.getBytes())
                     .compact();
 
             return ResponseEntity.ok(Map.of("token", token));
@@ -98,8 +100,7 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout() {
-        // Since JWT is stateless, logout is primarily done client-side, 
-        // but we return a success response to acknowledge the action.
+        // logout happens client-side, so we only return success
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
 }

@@ -13,7 +13,7 @@ public class Team {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String nazwa;
+    private String name;
 
     @OneToMany(mappedBy = "team", fetch = FetchType.LAZY)
     @JsonIgnore
@@ -22,8 +22,8 @@ public class Team {
     public Team() {
     }
 
-    public Team(String nazwa) {
-        this.nazwa = nazwa;
+    public Team(String name) {
+        this.name = name;
     }
 
     public Long getId() {
@@ -34,12 +34,12 @@ public class Team {
         this.id = id;
     }
 
-    public String getNazwa() {
-        return nazwa;
+    public String getName() {
+        return name;
     }
 
-    public void setNazwa(String nazwa) {
-        this.nazwa = nazwa;
+    public void setName(String name) {
+        this.name = name;
     }
 
     public Set<User> getUsers() {

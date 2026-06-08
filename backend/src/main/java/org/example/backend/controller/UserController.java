@@ -29,23 +29,23 @@ public class UserController {
         this.teamRepository = teamRepository;
     }
 
-    // GET all users (everyone logged in can view)
     @GetMapping
     public ResponseEntity<List<User>> getAllUsers() {
         return ResponseEntity.ok(userRepository.findAll());
     }
 
-    // GET user details by id
     @GetMapping("/{id}")
     public ResponseEntity<?> getUserById(@PathVariable Long id) {
         Optional<User> userOpt = userRepository.findById(id);
+
         if (userOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "User not found"));
         }
+
         return ResponseEntity.ok(userOpt.get());
     }
 
-    // SET user role (ADMIN only)
+    // ONLY FOR ADMIN
     @PutMapping("/{id}/role")
     public ResponseEntity<?> setUserRole(
             @PathVariable Long id,
@@ -81,7 +81,7 @@ public class UserController {
         return ResponseEntity.ok(Map.of("message", "Role updated successfully"));
     }
 
-    // EDIT team, dodanie uzytkownika (Self or ADMIN)
+    // ONLY FOR ADMIN OR SELF
     @PutMapping("/{id}/team")
     public ResponseEntity<?> setUserTeam(
             @PathVariable Long id,

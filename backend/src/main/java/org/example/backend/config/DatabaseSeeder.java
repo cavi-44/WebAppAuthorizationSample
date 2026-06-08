@@ -25,7 +25,6 @@ public class DatabaseSeeder {
             UserRepository userRepository,
             ResourceRepository resourceRepository) {
         return args -> {
-            // 1. Seed Roles
             Role roleUser = null;
             Role roleMod = null;
             Role roleAdmin = null;
@@ -40,7 +39,6 @@ public class DatabaseSeeder {
                 roleAdmin = roleRepository.findById("ROLE_ADMIN").orElse(null);
             }
 
-            // 2. Seed Teams
             Team realMadrid = null;
             Team fcBarcelona = null;
             Team manUnited = null;
@@ -54,14 +52,13 @@ public class DatabaseSeeder {
                 bayern = teamRepository.save(new Team("Bayern Munich"));
                 arsenal = teamRepository.save(new Team("Arsenal"));
             } else {
-                realMadrid = teamRepository.findByNazwa("Real Madrid").orElse(null);
-                fcBarcelona = teamRepository.findByNazwa("FC Barcelona").orElse(null);
-                manUnited = teamRepository.findByNazwa("Manchester United").orElse(null);
-                bayern = teamRepository.findByNazwa("Bayern Munich").orElse(null);
-                arsenal = teamRepository.findByNazwa("Arsenal").orElse(null);
+                realMadrid = teamRepository.findByName("Real Madrid").orElse(null);
+                fcBarcelona = teamRepository.findByName("FC Barcelona").orElse(null);
+                manUnited = teamRepository.findByName("Manchester United").orElse(null);
+                bayern = teamRepository.findByName("Bayern Munich").orElse(null);
+                arsenal = teamRepository.findByName("Arsenal").orElse(null);
             }
 
-            // 3. Seed Users
             User admin = null;
             User realUser = null;
             User realMod = null;
@@ -108,7 +105,6 @@ public class DatabaseSeeder {
                 barcaUser = userRepository.findByLogin("barca_user").orElse(null);
             }
 
-            // 4. Seed Posts
             if (resourceRepository.count() == 0 && realUser != null && barcaUser != null) {
                 Resource post1 = new Resource();
                 post1.setTitle("Real Madrid in Champions League");

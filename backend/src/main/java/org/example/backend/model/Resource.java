@@ -23,7 +23,7 @@ public class Resource {
     private LocalDateTime creationDate = LocalDateTime.now();
 
     @Column(nullable = false)
-    private boolean isPrivate; // true = for group (team), false = for all (public)
+    private boolean isPrivate; // true = visible for team, false = public
 
     public Resource() {
     }

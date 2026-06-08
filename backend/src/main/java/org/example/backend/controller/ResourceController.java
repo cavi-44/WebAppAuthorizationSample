@@ -28,7 +28,7 @@ public class ResourceController {
         this.userRepository = userRepository;
     }
 
-    // Response DTO containing authorization details for the frontend
+    // DTO
     public static class ResourceResponseDto {
         public Long id;
         public String title;
@@ -42,7 +42,6 @@ public class ResourceController {
         public boolean canDelete;
     }
 
-    // GET posty (z grupy + moje + dla wszystkich; posortowane wedlug daty) + max 15 na zapytanie
     @GetMapping
     public ResponseEntity<?> getResources(
             @RequestParam(defaultValue = "0") int page,
@@ -60,7 +59,7 @@ public class ResourceController {
             String currentUserRole = currentUser.getRole().getName();
             boolean isAdmin = currentUserRole.equals("ROLE_ADMIN");
 
-            // Cap the page size at 15
+            // max 15 posts per request
             int pageSize = Math.min(size, 15);
 
             List<Resource> resources = resourceRepository.findVisibleResources(
@@ -79,18 +78,16 @@ public class ResourceController {
                 dto.creationDate = resource.getCreationDate();
                 dto.isPrivate = resource.isPrivate();
 
-                // Fetch author details
                 Optional<User> authorOpt = userRepository.findById(resource.getAuthorId());
                 if (authorOpt.isPresent()) {
                     User author = authorOpt.get();
                     dto.authorLogin = author.getLogin();
-                    dto.authorTeamName = author.getTeam() != null ? author.getTeam().getNazwa() : "No Team";
+                    dto.authorTeamName = author.getTeam() != null ? author.getTeam().getName() : "No Team";
                 } else {
                     dto.authorLogin = "Deleted User";
                     dto.authorTeamName = "No Team";
                 }
 
-                // Determine frontend actions permissions
                 boolean isAuthor = resource.getAuthorId().equals(currentUserId);
                 
                 boolean isTeamMod = false;
@@ -114,7 +111,6 @@ public class ResourceController {
         }
     }
 
-    // INSERT post (id_usera, title, description, bool czy do grupy czy do wszystkich)
     @PostMapping
     public ResponseEntity<?> createResource(@RequestBody ResourceRequest request, Authentication authentication) {
         try {
@@ -138,7 +134,6 @@ public class ResourceController {
         }
     }
 
-    // EDIT post (id, title, description)
     @PutMapping("/{id}")
     public ResponseEntity<?> updateResource(
             @PathVariable Long id,
@@ -157,7 +152,7 @@ public class ResourceController {
             Resource resource = resourceOpt.get();
             boolean isAuthor = resource.getAuthorId().equals(currentUserId);
 
-            // Only author or ADMIN can edit
+            // only author or admin can edit
             if (!isAuthor && !isAdmin) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "No permission to edit this post"));
             }
@@ -176,7 +171,6 @@ public class ResourceController {
         }
     }
 
-    // DELETE post (id)
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteResource(@PathVariable Long id, Authentication authentication) {
         try {
@@ -198,7 +192,7 @@ public class ResourceController {
             Resource resource = resourceOpt.get();
             boolean isAuthor = resource.getAuthorId().equals(currentUserId);
 
-            // Check if moderator of the same team
+            // check if mod of the same team
             boolean isTeamMod = false;
             if (currentUserRole.equals("ROLE_MOD")) {
                 Optional<User> authorOpt = userRepository.findById(resource.getAuthorId());
