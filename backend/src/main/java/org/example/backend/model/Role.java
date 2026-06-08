@@ -8,7 +8,7 @@ import jakarta.persistence.Table;
 @Table(name = "roles")
 public class Role {
     @Id
-    private String name; // e.g. ROLE_USER, ROLE_MOD, ROLE_ADMIN
+    private String name;
 
     public Role() {
     }

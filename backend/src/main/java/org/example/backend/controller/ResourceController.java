@@ -1,8 +1,4 @@
 package org.example.backend.controller;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.SignatureException;
 import org.example.backend.model.Resource;
 import org.example.backend.model.User;
 import org.example.backend.repository.ResourceRepository;
@@ -12,7 +8,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,7 +25,6 @@ public class ResourceController {
     private final ResourceRepository resourceRepository;
     private final UserRepository userRepository;
 
-
     // Zabezpiecza tytuł: od 3 do 100 znaków, całkowity zakaz nawiasów < i >
     private static final Pattern TITLE_PATTERN = Pattern.compile("^[^<>]{3,100}$");
 
@@ -39,7 +33,7 @@ public class ResourceController {
         this.userRepository = userRepository;
     }
 
-    // Response DTO containing authorization details for the frontend
+    // DTO
     public static class ResourceResponseDto {
         public Long id;
         public String title;
@@ -53,7 +47,6 @@ public class ResourceController {
         public boolean canDelete;
     }
 
-    // GET posty (z grupy + moje + dla wszystkich; posortowane wedlug daty) + max 15 na zapytanie
     @GetMapping
     public ResponseEntity<?> getResources(
             @RequestParam(defaultValue = "0") int page,
@@ -71,7 +64,7 @@ public class ResourceController {
             String currentUserRole = currentUser.getRole().getName();
             boolean isAdmin = currentUserRole.equals("ROLE_ADMIN");
 
-            // Cap the page size at 15
+            // max 15 posts per request
             int pageSize = Math.min(size, 15);
 
             List<Resource> resources = resourceRepository.findVisibleResources(
@@ -90,18 +83,16 @@ public class ResourceController {
                 dto.creationDate = resource.getCreationDate();
                 dto.isPrivate = resource.isPrivate();
 
-                // Fetch author details
                 Optional<User> authorOpt = userRepository.findById(resource.getAuthorId());
                 if (authorOpt.isPresent()) {
                     User author = authorOpt.get();
                     dto.authorLogin = author.getLogin();
-                    dto.authorTeamName = author.getTeam() != null ? author.getTeam().getNazwa() : "No Team";
+                    dto.authorTeamName = author.getTeam() != null ? author.getTeam().getName() : "No Team";
                 } else {
                     dto.authorLogin = "Deleted User";
                     dto.authorTeamName = "No Team";
                 }
 
-                // Determine frontend actions permissions
                 boolean isAuthor = resource.getAuthorId().equals(currentUserId);
                 
                 boolean isTeamMod = false;
@@ -125,83 +116,48 @@ public class ResourceController {
         }
     }
 
-    // INSERT post (id_usera, title, description, bool czy do grupy czy do wszystkich)
     @PostMapping
     public ResponseEntity<?> createResource(@RequestBody ResourceRequest request, Authentication authentication) {
         try {
             Long currentUserId = Long.parseLong(authentication.getName());
             
-            if (request.title == null || request.title.trim().isEmpty() ||
-                request.description == null || request.description.trim().isEmpty()) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Title and description are required"));
+            // 1. Explicit data validation for title, description size, and XSS safety
+            ResponseEntity<?> validationError = validateResourceData(request);
+            if (validationError != null) {
+                return validationError;
             }
 
+            // 2. Build and save the resource
             Resource resource = new Resource();
-            resource.setTitle(request.title);
-            resource.setDescription(request.description);
+            resource.setTitle(request.getTitle());
+            resource.setDescription(request.getDescription());
             resource.setAuthorId(currentUserId);
-            resource.setPrivate(request.isPrivate != null && request.isPrivate);
+            resource.setPrivate(request.getPrivate() != null && request.getPrivate());
 
             resourceRepository.save(resource);
-            return ResponseEntity.ok(Map.of("message", "Created successfully"));
+            return ResponseEntity.ok(Map.of("message", "Resource created successfully"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Error creating post"));
-    // Ekstrakcja i weryfikacja tokena z własną obsługą wyjątków
-    private Claims verifyToken(String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing or invalid token format");
-        }
-
-        String token = authHeader.substring(7);
-
-        try {
-            return Jwts.parserBuilder()
-                    .setSigningKey(SECRET_KEY.getBytes())
-                    .build()
-                    .parseClaimsJws(token)
-                    .getBody();
-        } catch (ExpiredJwtException | SignatureException | IllegalArgumentException e) {
-            // Bezpiecznie wyłapuje specyficzne błędy biblioteki jjwt i przekuwa je w czytelny błąd 401
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token is invalid or expired");
         }
     }
 
-    // Jawna metoda walidująca zasoby chroniąca przed XSS i DoS
-    private void validateResourceData(ResourceRequest request) {
+    // Explicit resource data validation to guard against XSS and DoS
+    private ResponseEntity<?> validateResourceData(ResourceRequest request) {
         if (request.getTitle() == null || !TITLE_PATTERN.matcher(request.getTitle()).matches()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Title must be between 3 and 100 characters long and cannot contain HTML tags (< or >)");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                Map.of("message", "Title must be between 3 and 100 characters long and cannot contain HTML tags (< or >)")
+            );
         }
 
-        if (request.getContent() == null || request.getContent().trim().isEmpty() || request.getContent().length() > 2000) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Content cannot be empty and must not exceed 2000 characters");
+        if (request.getDescription() == null || request.getDescription().trim().isEmpty() || request.getDescription().length() > 2000) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                Map.of("message", "Content cannot be empty and must not exceed 2000 characters")
+            );
         }
+
+        return null;
     }
 
-    @PostMapping
-    public ResponseEntity<String> createResource(
-            @RequestHeader("Authorization") String authHeader,
-            @RequestBody ResourceRequest request) {
-
-        // 1. Walidacja tożsamości
-        Claims claims = verifyToken(authHeader);
-        Long userId = Long.parseLong(claims.getSubject());
-
-        // 2. Jawna walidacja struktury danych wejściowych
-        validateResourceData(request);
-
-        // 3. Budowa i zapis obiektu
-        Resource resource = new Resource();
-        resource.setTitle(request.getTitle());
-        resource.setContent(request.getContent());
-        resource.setAuthorId(userId);
-
-        resourceRepository.save(resource);
-        return ResponseEntity.status(HttpStatus.CREATED).body("Resource created successfully");
-    }
-
-    // EDIT post (id, title, description)
     @PutMapping("/{id}")
     public ResponseEntity<?> updateResource(
             @PathVariable Long id,
@@ -220,16 +176,16 @@ public class ResourceController {
             Resource resource = resourceOpt.get();
             boolean isAuthor = resource.getAuthorId().equals(currentUserId);
 
-            // Only author or ADMIN can edit
+            // only author or admin can edit
             if (!isAuthor && !isAdmin) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "No permission to edit this post"));
             }
 
-            if (request.title != null && !request.title.trim().isEmpty()) {
-                resource.setTitle(request.title);
+            if (request.getTitle() != null && !request.getTitle().trim().isEmpty()) {
+                resource.setTitle(request.getTitle());
             }
-            if (request.description != null && !request.description.trim().isEmpty()) {
-                resource.setDescription(request.description);
+            if (request.getDescription() != null && !request.getDescription().trim().isEmpty()) {
+                resource.setDescription(request.getDescription());
             }
 
             resourceRepository.save(resource);
@@ -239,7 +195,6 @@ public class ResourceController {
         }
     }
 
-    // DELETE post (id)
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteResource(@PathVariable Long id, Authentication authentication) {
         try {
@@ -261,7 +216,7 @@ public class ResourceController {
             Resource resource = resourceOpt.get();
             boolean isAuthor = resource.getAuthorId().equals(currentUserId);
 
-            // Check if moderator of the same team
+            // check if mod of the same team
             boolean isTeamMod = false;
             if (currentUserRole.equals("ROLE_MOD")) {
                 Optional<User> authorOpt = userRepository.findById(resource.getAuthorId());

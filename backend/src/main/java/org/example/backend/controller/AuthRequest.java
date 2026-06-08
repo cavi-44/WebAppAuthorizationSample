@@ -20,8 +20,8 @@ public class AuthRequest {
         this.password = password;
     }
 
-    public int getTeamId(){
-      return teamId;
+    public Long getTeamId(){
+      return this.teamId;
     }
     
     public void setTeamId(Long teamId){

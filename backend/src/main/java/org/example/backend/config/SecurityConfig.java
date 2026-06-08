@@ -1,5 +1,6 @@
 package org.example.backend.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -18,7 +19,8 @@ import java.util.List;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private final String SECRET_KEY = "BardzoTajnyKluczZabezpieczajacyTokenyWymagajacyMinimum256Bitow!!";
+    @Value("${security.jwt.secret}")
+    private String secretKey;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -44,7 +46,7 @@ public class SecurityConfig {
                         ).permitAll() // Swagger UI & OpenAPI docs
                         .anyRequest().authenticated() // All other requests require a valid JWT token
                 )
-                .addFilterBefore(new JwtAuthenticationFilter(SECRET_KEY), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtAuthenticationFilter(secretKey), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
