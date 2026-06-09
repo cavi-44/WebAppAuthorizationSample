@@ -34,11 +34,9 @@ public class RBACService {
 
 
 
-
-
         Long currentUserId = Long.parseLong(authentication.getName());
         User currentUser = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found in database"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "BAD PERMISSIONs"));
 
         String userRole = currentUser.getRole().getName();
 

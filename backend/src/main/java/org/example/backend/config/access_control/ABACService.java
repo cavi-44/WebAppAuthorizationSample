@@ -24,7 +24,7 @@ public class ABACService {
     public void evaluateDeletePolicy() {
         LocalTime now = LocalTime.now();
 
-        if (now.isAfter(LocalTime.of(14, 0)) || now.isBefore(LocalTime.of(8, 0))) {
+        if (now.isAfter(LocalTime.of(22, 0)) || now.isBefore(LocalTime.of(8, 0))) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Destructive actions (DELETE) are blocked between 22:00 and 08:00");
         }
@@ -83,7 +83,6 @@ public class ABACService {
                 }
             }
         }
-
         return false;
     }
 }

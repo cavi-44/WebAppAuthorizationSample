@@ -42,7 +42,6 @@ public class UserController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getUserById(@PathVariable Long id) {
         Optional<User> userOpt = userRepository.findById(id);
-
         if (userOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "User not found"));
         }
@@ -58,61 +57,71 @@ public class UserController {
             Authentication authentication) {
 
 
+        try {
+            boolean isAdmin = rbacService.validateRoles(authentication, "ROLE_ADMIN");
+            if (!isAdmin) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only admin can change roles");
+            }
 
-        boolean isAdmin = rbacService.validateRoles(authentication, "ROLE_ADMIN");
-        if (!isAdmin) {throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only admin can change roles");}
+            String roleName = payload.get("role");
+            if (roleName == null || roleName.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Role is required"));
+            }
 
-        String roleName = payload.get("role");
-        if (roleName == null || roleName.trim().isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Role is required"));
+            Optional<User> userOpt = userRepository.findById(id);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "User not found"));
+            }
+
+            Optional<Role> roleOpt = roleRepository.findById(roleName);
+            if (roleOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Role does not exist"));
+            }
+
+            User user = userOpt.get();
+            user.setRole(roleOpt.get());
+            userRepository.save(user);
+
+            return ResponseEntity.ok(Map.of("message", "Role updated successfully"));
+
+        }catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
         }
-
-        Optional<User> userOpt = userRepository.findById(id);
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "User not found"));
-        }
-
-        Optional<Role> roleOpt = roleRepository.findById(roleName);
-        if (roleOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Role does not exist"));
-        }
-
-        User user = userOpt.get();
-        user.setRole(roleOpt.get());
-        userRepository.save(user);
-
-        return ResponseEntity.ok(Map.of("message", "Role updated successfully"));
     }
-
     // ONLY FOR ADMIN
     @PutMapping("/{id}/team")
     public ResponseEntity<?> setUserTeam(
             @PathVariable Long id,
             @RequestBody Map<String, Long> payload,
             Authentication authentication) {
+        try {
+            boolean isAdmin = rbacService.validateRoles(authentication, "ROLE_ADMIN");
+            if (!isAdmin) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You must be an Admin to create teams");
+            }
 
-        boolean isAdmin = rbacService.validateRoles(authentication, "ROLE_ADMIN");
-        if (!isAdmin) {throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You must be an Admin to create teams");}
+            Long teamId = payload.get("teamId");
+            if (teamId == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Team ID is required"));
+            }
 
-        Long teamId = payload.get("teamId");
-        if (teamId == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Team ID is required"));
+            Optional<User> userOpt = userRepository.findById(id);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "User not found"));
+            }
+
+            Optional<Team> teamOpt = teamRepository.findById(teamId);
+            if (teamOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Team does not exist"));
+            }
+
+            User user = userOpt.get();
+            user.setTeam(teamOpt.get());
+            userRepository.save(user);
+
+            return ResponseEntity.ok(Map.of("message", "Team updated successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
         }
-
-        Optional<User> userOpt = userRepository.findById(id);
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "User not found"));
-        }
-
-        Optional<Team> teamOpt = teamRepository.findById(teamId);
-        if (teamOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Team does not exist"));
-        }
-
-        User user = userOpt.get();
-        user.setTeam(teamOpt.get());
-        userRepository.save(user);
-
-        return ResponseEntity.ok(Map.of("message", "Team updated successfully"));
     }
 }

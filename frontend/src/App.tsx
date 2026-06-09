@@ -167,7 +167,7 @@ function App() {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h1>KIBALLE</h1>
+          <h1>KIBALL</h1>
           <p>{isRegistering ? "Tworzenie nowego profilu" : "Dla prawdziwych fanów"}</p>
         </div>
 
