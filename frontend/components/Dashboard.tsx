@@ -184,7 +184,8 @@ const Dashboard: React.FC<DashboardProps> = ({ userProfile, onLogout }) => {
     try {
       await api.put(`/users/${targetUserId}/role`, { role: newRole });
       fetchAdminData(); 
-
+      
+      //DEMO
       window.location.reload();
       setSuccessMsg("Rola użytkownika została zaktualizowana!");
       // Reload admin data
@@ -240,7 +241,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userProfile, onLogout }) => {
       <header className="dashboard-header">
         <div className="logo-section">
           <h2>
-            SHIELD-AUTH <span>Secured v1</span>
+            KIBALLE <span>GADAJ O PILCE</span>
           </h2>
         </div>
         <div className="user-profile-widget">
@@ -381,7 +382,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userProfile, onLogout }) => {
         <div className="sidebar-widgets">
           {/* My Security Info */}
           <div className="card-glass widget-card">
-            <h4>Twój Profil Bezpieczeństwa</h4>
+            <h4>Twój Profil</h4>
             <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "14px" }}>
               <div>
                 <span style={{ color: "var(--text-secondary)" }}>ID Użytkownika:</span>{" "}

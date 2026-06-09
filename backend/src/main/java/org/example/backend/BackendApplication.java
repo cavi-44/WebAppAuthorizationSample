@@ -13,7 +13,7 @@ import java.nio.file.Paths;
 public class BackendApplication {
 
     public static void main(String[] args) {
-        // Load .env file from the backend root directory on startup
+
         try {
             Path envPath = Paths.get(".env");
             if (Files.exists(envPath)) {
@@ -23,7 +23,7 @@ public class BackendApplication {
                         int eqIndex = trimmed.indexOf("=");
                         String key = trimmed.substring(0, eqIndex).trim();
                         String value = trimmed.substring(eqIndex + 1).trim();
-                        // Strip surrounding quotes if present
+
                         if (value.startsWith("\"") && value.endsWith("\"")) {
                             value = value.substring(1, value.length() - 1);
                         } else if (value.startsWith("'") && value.endsWith("'")) {

@@ -4,6 +4,7 @@ import org.example.backend.model.User;
 import org.example.backend.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -23,6 +24,17 @@ public class RBACService {
         if (authentication == null || authentication.getName() == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is not authenticated");
         }
+
+
+        //WERSJA Z JWT
+//        return authentication.getAuthorities().stream()
+//                .map(GrantedAuthority::getAuthority)
+//                .anyMatch(userRole -> // Bezpieczne porównanie: akceptuje formaty z prefiksem "ROLE_" lub bez niego
+//                        Arrays.asList(allowedRoles).contains(userRole));
+
+
+
+
 
         Long currentUserId = Long.parseLong(authentication.getName());
         User currentUser = userRepository.findById(currentUserId)

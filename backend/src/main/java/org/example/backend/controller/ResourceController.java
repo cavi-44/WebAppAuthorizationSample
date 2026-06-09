@@ -1,16 +1,14 @@
 package org.example.backend.controller;
-import org.example.backend.config.ABACService;
+import org.example.backend.config.access_control.ABACService;
 import org.example.backend.config.access_control.RBACService;
 import org.example.backend.model.Resource;
 import org.example.backend.model.User;
 import org.example.backend.repository.ResourceRepository;
 import org.example.backend.repository.UserRepository;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -66,7 +64,6 @@ public class ResourceController {
             }
 
             User currentUser = currentUserOpt.get();
-            Long teamId = currentUser.getTeam() != null ? currentUser.getTeam().getId() : null;
 
             boolean isAdmin = rbacService.validateRoles(authentication, "ROLE_ADMIN");
 
@@ -196,6 +193,8 @@ public class ResourceController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteResource(@PathVariable Long id, Authentication authentication) {
         try {
+
+
             Long currentUserId = Long.parseLong(authentication.getName());
             Optional<User> currentUserOpt = userRepository.findById(currentUserId);
             if (currentUserOpt.isEmpty()) {
@@ -204,7 +203,9 @@ public class ResourceController {
 
             User currentUser = currentUserOpt.get();
             boolean isAdmin = rbacService.validateRoles(authentication, "ROLE_ADMIN");
-
+            if(!isAdmin){
+                abacService.evaluateDeletePolicy();
+            }
 
             boolean isMod = rbacService.validateRoles(authentication, "ROLE_MOD");
             Resource resource = abacService.getVisibleResourceOrThrow(id, currentUser, isAdmin);

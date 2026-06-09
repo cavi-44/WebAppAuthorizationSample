@@ -167,8 +167,8 @@ function App() {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h1>SHIELD-AUTH</h1>
-          <p>{isRegistering ? "Tworzenie nowego bezpiecznego profilu" : "Dostęp do chronionych zasobów"}</p>
+          <h1>KIBALLE</h1>
+          <p>{isRegistering ? "Tworzenie nowego profilu" : "Dla prawdziwych fanów"}</p>
         </div>
 
         {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
@@ -258,7 +258,7 @@ function App() {
               />
             </div>
             <button type="submit" className="btn btn-primary" style={{ width: "100%", marginTop: "10px" }} disabled={loading}>
-              {loading ? "Weryfikacja..." : "Uwierzytelnij"}
+              {loading ? "Weryfikacja..." : "Zaloguj"}
             </button>
             <div className="auth-footer">
               Nie posiadasz jeszcze profilu?{" "}

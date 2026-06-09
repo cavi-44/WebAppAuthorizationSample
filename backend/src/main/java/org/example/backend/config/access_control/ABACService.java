@@ -1,4 +1,4 @@
-package org.example.backend.config;
+package org.example.backend.config.access_control;
 
 import org.example.backend.model.Resource;
 import org.example.backend.model.User;
@@ -20,56 +20,22 @@ public class ABACService {
     private final ResourceRepository resourceRepository;
 
 
+
+    public void evaluateDeletePolicy() {
+        LocalTime now = LocalTime.now();
+
+        if (now.isAfter(LocalTime.of(14, 0)) || now.isBefore(LocalTime.of(8, 0))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Destructive actions (DELETE) are blocked between 22:00 and 08:00");
+        }
+    }
     public ABACService(UserRepository userRepository, ResourceRepository resourceRepository) {
         this.userRepository = userRepository;
         this.resourceRepository = resourceRepository;
     }
-    public boolean evaluatePolicy(User subject, Resource resource, String action) {
-        //RBAC zastosowanie, admin moze wszystko
-        if ("ADMIN".equals(subject.getRole().getName())) {
-            return true;
-        }
 
-        // DEMO: blokowanie usuwania w godzinach 22-8
-        if ("DELETE".equals(action)) {
-            LocalTime now = LocalTime.now();
-            if (now.isAfter(LocalTime.of(22, 0)) || now.isBefore(LocalTime.of(8, 0))) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                        "ABAC Violation: Destructive actions are blocked between 22:00 and 08:00");
-            }
-        }
 
-        // author check
-        boolean isAuthor = resource.getAuthorId().equals(subject.getId());
 
-        // teamId
-        Long subjectTeamId = subject.getTeam() != null ? subject.getTeam().getId() : null;
-        Long resourceTeamId = userRepository.findById(resource.getAuthorId())
-                .map(author -> author.getTeam() != null ? author.getTeam().getId() : null)
-                .orElse(null);
-
-        if ("READ".equals(action)) {
-            if (resource.isPrivate() && !isAuthor) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found");
-            }
-
-            boolean sameTeam = subjectTeamId != null && subjectTeamId.equals(resourceTeamId);
-            if (!isAuthor && !sameTeam) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found");
-            }
-        }
-
-        if ("WRITE".equals(action) || "DELETE".equals(action)) {
-            //author oraz admin moga edytowac oraz usuwac , mod moze tylko usuwac
-            //ZASTOSOWANIE RBAC TUTAJ TEZ
-            boolean isMod = "MOD".equals(subject.getRole().getName()) || "ROLE_MOD".equals(subject.getRole().getName());
-            boolean sameTeam = subjectTeamId != null && subjectTeamId.equals(resourceTeamId);
-
-            return isAuthor || (isMod && sameTeam && "DELETE".equals(action));
-        }
-
-        return false;
-    }
     public Resource getVisibleResourceOrThrow(Long resourceId, User currentUser, boolean isAdmin) {
         List<Resource> visibleResources = this.getVisibleResources(currentUser, isAdmin, 0, 100);
 
