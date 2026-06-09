@@ -5,12 +5,12 @@ interface User {
   id: number;
   login: string;
   role: { name: string };
-  team: { id: number; nazwa: string } | null;
+  team: { id: number; name: string } | null;
 }
 
 interface Team {
   id: number;
-  nazwa: string;
+  name: string;
 }
 
 interface Role {
@@ -183,9 +183,13 @@ const Dashboard: React.FC<DashboardProps> = ({ userProfile, onLogout }) => {
   const handleRoleChange = async (targetUserId: number, newRole: string) => {
     try {
       await api.put(`/users/${targetUserId}/role`, { role: newRole });
+      fetchAdminData(); 
+
+      window.location.reload();
       setSuccessMsg("Rola użytkownika została zaktualizowana!");
       // Reload admin data
-      fetchAdminData();
+      
+      
     } catch (err: any) {
       setErrorMsg(err.response?.data?.message || "Błąd zmiany roli.");
     }
@@ -247,7 +251,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userProfile, onLogout }) => {
                 {userProfile.role.name.replace("ROLE_", "")}
               </span>
               {userProfile.team && (
-                <span className="badge badge-team">{userProfile.team.nazwa}</span>
+                <span className="badge badge-team">{userProfile.team.name}</span>
               )}
             </div>
           </div>
@@ -395,7 +399,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userProfile, onLogout }) => {
               </div>
               <div>
                 <span style={{ color: "var(--text-secondary)" }}>Grupa / Drużyna:</span>{" "}
-                <strong>{userProfile.team ? userProfile.team.nazwa : "Brak"}</strong>
+                <strong>{userProfile.team ? userProfile.team.name : "Brak"}</strong>
               </div>
             </div>
           </div>
@@ -414,7 +418,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userProfile, onLogout }) => {
                           {u.role.name.replace("ROLE_", "")}
                         </span>
                         <span className="badge badge-team" style={{ fontSize: "9px" }}>
-                          {u.team ? u.team.nazwa : "Brak"}
+                          {u.team ? u.team.name : "Brak"}
                         </span>
                       </div>
                     </div>
@@ -442,7 +446,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userProfile, onLogout }) => {
                         <option value="" disabled>Zmień team</option>
                         {teams.map((t) => (
                           <option key={t.id} value={t.id}>
-                            {t.nazwa}
+                            {t.name}
                           </option>
                         ))}
                       </select>

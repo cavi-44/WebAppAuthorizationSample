@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:8080/api",
+  baseURL: "http://192.168.1.64:8080/api",
   timeout: 10000,
 });
 
@@ -26,7 +26,7 @@ api.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       localStorage.removeItem("jwt_token");
       // Optional: force reload to boot user back to login screen
-      window.location.reload();
+      //window.location.reload();
     }
     return Promise.reject(error);
   }

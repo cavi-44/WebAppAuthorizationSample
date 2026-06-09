@@ -6,12 +6,12 @@ interface User {
   id: number;
   login: string;
   role: { name: string };
-  team: { id: number; nazwa: string } | null;
+  team: { id: number; name: string } | null;
 }
 
 interface Team {
   id: number;
-  nazwa: string;
+  name: string;
 }
 
 function App() {
@@ -79,7 +79,7 @@ function App() {
       setErrorMsg("Wprowadź login i hasło.");
       return;
     }
-
+    
     try {
       setLoading(true);
       setErrorMsg("");
@@ -98,6 +98,7 @@ function App() {
     } finally {
       setLoading(false);
     }
+    
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -209,7 +210,7 @@ function App() {
                 <option value="" disabled>Wybierz klub...</option>
                 {teams.map((t) => (
                   <option key={t.id} value={t.id}>
-                    {t.nazwa}
+                    {t.name}
                   </option>
                 ))}
               </select>

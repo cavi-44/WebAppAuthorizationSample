@@ -1,4 +1,6 @@
 package org.example.backend.controller;
+import org.example.backend.config.ABACService;
+import org.example.backend.config.access_control.RBACService;
 import org.example.backend.model.Resource;
 import org.example.backend.model.User;
 import org.example.backend.repository.ResourceRepository;
@@ -8,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,13 +27,16 @@ public class ResourceController {
 
     private final ResourceRepository resourceRepository;
     private final UserRepository userRepository;
-
+    private final RBACService rbacService;
+    private final ABACService abacService;
     // Zabezpiecza tytuł: od 3 do 100 znaków, całkowity zakaz nawiasów < i >
     private static final Pattern TITLE_PATTERN = Pattern.compile("^[^<>]{3,100}$");
 
-    public ResourceController(ResourceRepository resourceRepository, UserRepository userRepository) {
+    public ResourceController(ResourceRepository resourceRepository, UserRepository userRepository, RBACService rbacService, ABACService abacService) {
         this.resourceRepository = resourceRepository;
         this.userRepository = userRepository;
+        this.rbacService = rbacService;
+        this.abacService = abacService;
     }
 
     // DTO
@@ -61,18 +67,12 @@ public class ResourceController {
 
             User currentUser = currentUserOpt.get();
             Long teamId = currentUser.getTeam() != null ? currentUser.getTeam().getId() : null;
-            String currentUserRole = currentUser.getRole().getName();
-            boolean isAdmin = currentUserRole.equals("ROLE_ADMIN");
 
-            // max 15 posts per request
-            int pageSize = Math.min(size, 15);
+            boolean isAdmin = rbacService.validateRoles(authentication, "ROLE_ADMIN");
 
-            List<Resource> resources = resourceRepository.findVisibleResources(
-                    currentUserId,
-                    teamId,
-                    isAdmin,
-                    PageRequest.of(page, pageSize)
-            );
+
+            List<Resource> resources = abacService.getVisibleResources(currentUser, isAdmin, page, size);
+
 
             List<ResourceResponseDto> dtos = resources.stream().map(resource -> {
                 ResourceResponseDto dto = new ResourceResponseDto();
@@ -93,18 +93,13 @@ public class ResourceController {
                     dto.authorTeamName = "No Team";
                 }
 
-                boolean isAuthor = resource.getAuthorId().equals(currentUserId);
-                
-                boolean isTeamMod = false;
-                if (currentUserRole.equals("ROLE_MOD") && authorOpt.isPresent()) {
-                    User author = authorOpt.get();
-                    if (author.getTeam() != null && currentUser.getTeam() != null) {
-                        isTeamMod = author.getTeam().getId().equals(currentUser.getTeam().getId());
-                    }
-                }
 
-                dto.canEdit = isAuthor || isAdmin;
-                dto.canDelete = isAuthor || isAdmin || isTeamMod;
+
+                boolean isMod = rbacService.validateRoles(authentication, "ROLE_MOD");
+
+
+                dto.canEdit = abacService.canEdit(currentUser, resource, isAdmin);
+                dto.canDelete = abacService.canDelete(currentUser, resource, isAdmin, isMod);
 
                 return dto;
             }).collect(Collectors.toList());
@@ -121,18 +116,17 @@ public class ResourceController {
         try {
             Long currentUserId = Long.parseLong(authentication.getName());
             
-            // 1. Explicit data validation for title, description size, and XSS safety
+
             ResponseEntity<?> validationError = validateResourceData(request);
             if (validationError != null) {
                 return validationError;
             }
 
-            // 2. Build and save the resource
             Resource resource = new Resource();
             resource.setTitle(request.getTitle());
             resource.setDescription(request.getDescription());
             resource.setAuthorId(currentUserId);
-            resource.setPrivate(request.getPrivate() != null && request.getPrivate());
+            resource.setPrivate(request.getIsPrivate() != null && request.getIsPrivate());
 
             resourceRepository.save(resource);
             return ResponseEntity.ok(Map.of("message", "Resource created successfully"));
@@ -141,7 +135,7 @@ public class ResourceController {
         }
     }
 
-    // Explicit resource data validation to guard against XSS and DoS
+
     private ResponseEntity<?> validateResourceData(ResourceRequest request) {
         if (request.getTitle() == null || !TITLE_PATTERN.matcher(request.getTitle()).matches()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
@@ -165,8 +159,14 @@ public class ResourceController {
             Authentication authentication) {
         try {
             Long currentUserId = Long.parseLong(authentication.getName());
-            String roleName = authentication.getAuthorities().iterator().next().getAuthority();
-            boolean isAdmin = roleName.equals("ROLE_ADMIN");
+            Optional<User> currentUserOpt = userRepository.findById(currentUserId);
+            if (currentUserOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "User not found"));
+            }
+
+            User currentUser = currentUserOpt.get();
+
+            boolean isAdmin = rbacService.validateRoles(authentication, "ROLE_ADMIN");
 
             Optional<Resource> resourceOpt = resourceRepository.findById(id);
             if (resourceOpt.isEmpty()) {
@@ -174,10 +174,8 @@ public class ResourceController {
             }
 
             Resource resource = resourceOpt.get();
-            boolean isAuthor = resource.getAuthorId().equals(currentUserId);
 
-            // only author or admin can edit
-            if (!isAuthor && !isAdmin) {
+            if (!abacService.canEdit(currentUser, resource, isAdmin)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "No permission to edit this post"));
             }
 
@@ -205,30 +203,15 @@ public class ResourceController {
             }
 
             User currentUser = currentUserOpt.get();
-            String currentUserRole = currentUser.getRole().getName();
-            boolean isAdmin = currentUserRole.equals("ROLE_ADMIN");
+            boolean isAdmin = rbacService.validateRoles(authentication, "ROLE_ADMIN");
 
-            Optional<Resource> resourceOpt = resourceRepository.findById(id);
-            if (resourceOpt.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Post not found"));
-            }
 
-            Resource resource = resourceOpt.get();
-            boolean isAuthor = resource.getAuthorId().equals(currentUserId);
+            boolean isMod = rbacService.validateRoles(authentication, "ROLE_MOD");
+            Resource resource = abacService.getVisibleResourceOrThrow(id, currentUser, isAdmin);
 
-            // check if mod of the same team
-            boolean isTeamMod = false;
-            if (currentUserRole.equals("ROLE_MOD")) {
-                Optional<User> authorOpt = userRepository.findById(resource.getAuthorId());
-                if (authorOpt.isPresent()) {
-                    User author = authorOpt.get();
-                    if (author.getTeam() != null && currentUser.getTeam() != null) {
-                        isTeamMod = author.getTeam().getId().equals(currentUser.getTeam().getId());
-                    }
-                }
-            }
 
-            if (isAuthor || isAdmin || isTeamMod) {
+
+            if (abacService.canDelete(currentUser, resource, isAdmin, isMod)) {
                 resourceRepository.delete(resource);
                 return ResponseEntity.ok(Map.of("message", "Deleted successfully"));
             } else {

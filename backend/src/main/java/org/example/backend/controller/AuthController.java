@@ -1,5 +1,8 @@
 package org.example.backend.controller;
 
+import ch.qos.logback.core.pattern.color.BlackCompositeConverter;
+import io.jsonwebtoken.Claims;
+import org.example.backend.config.TokenBlacklistService;
 import org.example.backend.model.Role;
 import org.example.backend.model.Team;
 import org.example.backend.model.User;
@@ -9,10 +12,7 @@ import org.example.backend.repository.TeamRepository;
 import org.example.backend.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import org.mindrot.jbcrypt.BCrypt;
 import io.jsonwebtoken.Jwts;
@@ -30,23 +30,24 @@ public class AuthController {
     private final UserRepository userRepository;
     private final TeamRepository teamRepository;
     private final RoleRepository roleRepository;
-    
+    private final TokenBlacklistService blacklistService;
     @Value("${security.jwt.secret}")
     private String secretKey;
 
     private static final Pattern LOGIN_PATTERN = Pattern.compile("^[a-zA-Z0-9._]{3,20}$");
     private static final Pattern PASSWORD_PATTERN = Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,64}$");
 
-    public AuthController(UserRepository userRepository, TeamRepository teamRepository, RoleRepository roleRepository) {
+    public AuthController(UserRepository userRepository, TeamRepository teamRepository, RoleRepository roleRepository, TokenBlacklistService blacklist) {
         this.userRepository = userRepository;
         this.teamRepository = teamRepository;
         this.roleRepository = roleRepository;
+        this.blacklistService = blacklist;
     }
 
-    // Proste metody pomocnicze do walidacji
+
     private ResponseEntity<?> validateRegistrationData(AuthRequest request) {
         if (request.getLogin() == null || !LOGIN_PATTERN.matcher(request.getLogin()).matches()) {
-            // Rzucenie tego wyjątku natychmiast przerywa działanie i zwraca błąd 400
+
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "\"Login contains forbidden characters or is too long. Permitted are alphanumerical characters, \\\".\\\" and \\\"_\\\", must be 3-20 characters long\"")
                     );
         }
@@ -125,8 +126,28 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout() {
-        // logout happens client-side, so we only return success
-        return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
+    public ResponseEntity<String> logout(@RequestHeader("Authorization") String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+
+            try {
+
+                Claims claims = Jwts.parserBuilder()
+                        .setSigningKey(this.secretKey.getBytes())
+                        .build()
+                        .parseClaimsJws(token)
+                        .getBody();
+
+
+                blacklistService.blacklistToken(token, claims.getExpiration());
+                System.out.println("Token added to blacklist: " + token.substring(0, 15) + "...");
+                return ResponseEntity.ok("Logged out successfully");
+
+            } catch (Exception e) {
+                // Jeśli token jest już zepsuty/przeterminowany, po prostu go ignorujemy
+                return ResponseEntity.ok("Already logged out or invalid token");
+            }
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No token provided");
     }
 }

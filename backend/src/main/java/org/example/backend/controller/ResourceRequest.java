@@ -21,8 +21,12 @@ public class ResourceRequest {
         this.description = content;
     }
 
-    public Boolean getPrivate() {
+    public Boolean getIsPrivate() {
         return isPrivate;
+    }
+
+    public void setIsPrivate(Boolean isPrivate) {
+        this.isPrivate = isPrivate;
     }
 
     public void setTitle(Boolean isPrivate) {

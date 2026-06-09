@@ -10,6 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import org.example.backend.config.access_control.RBACService;
 
 import java.util.List;
 import java.util.Map;
@@ -22,17 +24,20 @@ public class UserController {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final TeamRepository teamRepository;
-
-    public UserController(UserRepository userRepository, RoleRepository roleRepository, TeamRepository teamRepository) {
+    private final RBACService rbacService;
+    public UserController(UserRepository userRepository, RoleRepository roleRepository, TeamRepository teamRepository, RBACService rbacService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.teamRepository = teamRepository;
+        this.rbacService = rbacService;
     }
 
     @GetMapping
     public ResponseEntity<List<User>> getAllUsers() {
         return ResponseEntity.ok(userRepository.findAll());
     }
+
+
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getUserById(@PathVariable Long id) {
@@ -52,12 +57,10 @@ public class UserController {
             @RequestBody Map<String, String> payload,
             Authentication authentication) {
 
-        boolean isAdmin = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
-        if (!isAdmin) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "Only administrator can change roles"));
-        }
+
+        boolean isAdmin = rbacService.validateRoles(authentication, "ROLE_ADMIN");
+        if (!isAdmin) {throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only admin can change roles");}
 
         String roleName = payload.get("role");
         if (roleName == null || roleName.trim().isEmpty()) {
@@ -81,20 +84,15 @@ public class UserController {
         return ResponseEntity.ok(Map.of("message", "Role updated successfully"));
     }
 
-    // ONLY FOR ADMIN OR SELF
+    // ONLY FOR ADMIN
     @PutMapping("/{id}/team")
     public ResponseEntity<?> setUserTeam(
             @PathVariable Long id,
             @RequestBody Map<String, Long> payload,
             Authentication authentication) {
 
-        Long currentUserId = Long.parseLong(authentication.getName());
-        boolean isAdmin = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-
-        if (!isAdmin && !currentUserId.equals(id)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "You cannot change team of other users"));
-        }
+        boolean isAdmin = rbacService.validateRoles(authentication, "ROLE_ADMIN");
+        if (!isAdmin) {throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You must be an Admin to create teams");}
 
         Long teamId = payload.get("teamId");
         if (teamId == null) {
