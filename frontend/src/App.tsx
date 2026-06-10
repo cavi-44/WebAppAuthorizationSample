@@ -6,7 +6,9 @@ import api from "./api.ts";
 import type { User, Team } from "./types.ts";
 
 function App() {
-  const [token, setToken] = useState<string | null>(localStorage.getItem("jwt_token"));
+  const [token, setToken] = useState<string | null>(
+    localStorage.getItem("jwt_token"),
+  );
   const [userProfile, setUserProfile] = useState<User | null>(null);
   const [isRegistering, setIsRegistering] = useState(false);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -69,7 +71,11 @@ function App() {
     }
   };
 
-  const handleRegister = async (usernameInput: string, passwordInput: string, teamIdInput: number) => {
+  const handleRegister = async (
+    usernameInput: string,
+    passwordInput: string,
+    teamIdInput: number,
+  ) => {
     try {
       setLoading(true);
       setErrorMsg("");
@@ -113,7 +119,14 @@ function App() {
 
   if (loading && !userProfile) {
     return (
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+        }}
+      >
         <h3>Trwa ładowanie profilu zabezpieczeń...</h3>
       </div>
     );
@@ -127,8 +140,8 @@ function App() {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h1>SHIELD-AUTH</h1>
-          <p>{isRegistering ? "Tworzenie nowego bezpiecznego profilu" : "Dostęp do chronionych zasobów"}</p>
+          <h1>KIBALL</h1>
+          <p>{isRegistering ? "Tworzenie nowego profilu" : "Zaloguj sie"}</p>
         </div>
 
         {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}

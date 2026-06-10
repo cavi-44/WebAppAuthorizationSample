@@ -1,7 +1,11 @@
 import React, { useState } from "react";
 
 interface CreatePostProps {
-  onCreatePost: (title: string, description: string, isPrivate: boolean) => Promise<void>;
+  onCreatePost: (
+    title: string,
+    description: string,
+    isPrivate: boolean,
+  ) => Promise<void>;
 }
 
 const CreatePost: React.FC<CreatePostProps> = ({ onCreatePost }) => {
@@ -27,7 +31,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ onCreatePost }) => {
           <input
             type="text"
             className="form-input"
-            placeholder="Wpisz chwytliwy tytuł..."
+            placeholder="Wpisz tytuł..."
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
@@ -38,7 +42,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ onCreatePost }) => {
           <textarea
             className="form-input"
             rows={3}
-            placeholder="Podziel się swoimi przemyśleniami..."
+            placeholder="Wpisz zawartosc posta..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             style={{ resize: "vertical" }}
@@ -53,7 +57,11 @@ const CreatePost: React.FC<CreatePostProps> = ({ onCreatePost }) => {
             checked={isPrivate}
             onChange={(e) => setIsPrivate(e.target.checked)}
           />
-          <label htmlFor="isPrivate" className="form-label" style={{ margin: 0, cursor: "pointer" }}>
+          <label
+            htmlFor="isPrivate"
+            className="form-label"
+            style={{ margin: 0, cursor: "pointer" }}
+          >
             Tylko dla mojej grupy (Prywatny)
           </label>
         </div>

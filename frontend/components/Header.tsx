@@ -7,7 +7,12 @@ interface HeaderProps {
   onLogout: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ username, roleName, teamName, onLogout }) => {
+const Header: React.FC<HeaderProps> = ({
+  username,
+  roleName,
+  teamName,
+  onLogout,
+}) => {
   const getRoleBadgeClass = (role: string) => {
     switch (role) {
       case "ROLE_ADMIN":
@@ -23,7 +28,7 @@ const Header: React.FC<HeaderProps> = ({ username, roleName, teamName, onLogout 
     <header className="dashboard-header">
       <div className="logo-section">
         <h2>
-          SHIELD-AUTH <span>Secured v1</span>
+          KIBALL <span>gadamy o pilce</span>
         </h2>
       </div>
       <div className="user-profile-widget">
