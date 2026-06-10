@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class TokenBlacklistService {
 
-    // Mapa przechowująca token jako klucz i jego datę wygaśnięcia jako wartość
+    // key:token; value: expiration_date
     private final Map<String, Date> blacklist = new ConcurrentHashMap<>();
 
     public void blacklistToken(String token, Date expirationDate) {
@@ -21,7 +21,7 @@ public class TokenBlacklistService {
         return blacklist.containsKey(token);
     }
 
-    // Ta metoda uruchamia się automatycznie co 1 godzinę
+    // automatically each hour
     @Scheduled(fixedRate = 3600000)
     public void cleanUpBlacklist() {
         Date now = new Date();
@@ -29,6 +29,4 @@ public class TokenBlacklistService {
         blacklist.entrySet().removeIf(entry -> entry.getValue().before(now));
         System.out.println("Wyczyszczono przedawnione tokeny z czarnej listy.");
     }
-
-
 }

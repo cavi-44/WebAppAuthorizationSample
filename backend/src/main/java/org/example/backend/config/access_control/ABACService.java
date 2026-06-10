@@ -34,8 +34,6 @@ public class ABACService {
         this.resourceRepository = resourceRepository;
     }
 
-
-
     public Resource getVisibleResourceOrThrow(Long resourceId, User currentUser, boolean isAdmin) {
         List<Resource> visibleResources = this.getVisibleResources(currentUser, isAdmin, 0, 100);
 

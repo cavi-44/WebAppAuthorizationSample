@@ -27,13 +27,13 @@ public class SecurityConfig {
         http
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
-                .headers(headers -> headers.frameOptions(frame -> frame.disable())) // Permit H2 console UI frames
+                .headers(headers -> headers.frameOptions(frame -> frame.disable()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Preflight
-                        .requestMatchers("/api/auth/**").permitAll() // Register, login, logout
-                        .requestMatchers("/api/teams").permitAll() // Get teams for registration dropdown
-                        .requestMatchers("/api/roles").permitAll() // Get roles for registration/admin dropdowns
-                        .requestMatchers("/h2-console/**").permitAll() // H2 console database
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/teams").permitAll()
+                        .requestMatchers("/api/roles").permitAll()
+                        .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers(
                                 "/swagger-ui",
                                 "/swagger-ui/**",
@@ -43,8 +43,8 @@ public class SecurityConfig {
                                 "/swagger-resources",
                                 "/swagger-resources/**",
                                 "/webjars/**"
-                        ).permitAll() // Swagger UI & OpenAPI docs
-                        .anyRequest().authenticated() // All other requests require a valid JWT token
+                        ).permitAll()
+                        .anyRequest().authenticated()
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(secretKey), UsernamePasswordAuthenticationFilter.class);
 
@@ -54,7 +54,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        //CONFIGTODO - swoje ip wpisac na liste
+        //TODO config - swoje ip wpisac na liste
         configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://192.168.1.64:5173", "http://192.168.1.21:5173"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));

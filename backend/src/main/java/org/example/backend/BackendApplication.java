@@ -14,30 +14,6 @@ public class BackendApplication {
 
     public static void main(String[] args) {
 
-        try {
-            Path envPath = Paths.get(".env");
-            if (Files.exists(envPath)) {
-                Files.readAllLines(envPath).forEach(line -> {
-                    String trimmed = line.trim();
-                    if (!trimmed.isEmpty() && !trimmed.startsWith("#") && trimmed.contains("=")) {
-                        int eqIndex = trimmed.indexOf("=");
-                        String key = trimmed.substring(0, eqIndex).trim();
-                        String value = trimmed.substring(eqIndex + 1).trim();
-
-                        if (value.startsWith("\"") && value.endsWith("\"")) {
-                            value = value.substring(1, value.length() - 1);
-                        } else if (value.startsWith("'") && value.endsWith("'")) {
-                            value = value.substring(1, value.length() - 1);
-                        }
-                        System.setProperty(key, value);
-                    }
-                });
-                System.out.println("Loaded environment variables from .env successfully.");
-            }
-        } catch (Exception e) {
-            System.err.println("Could not load .env file: " + e.getMessage());
-        }
-
         SpringApplication.run(BackendApplication.class, args);
     }
 }

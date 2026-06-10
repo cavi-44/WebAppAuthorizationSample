@@ -1,6 +1,5 @@
 package org.example.backend.controller;
 
-import ch.qos.logback.core.pattern.color.BlackCompositeConverter;
 import io.jsonwebtoken.Claims;
 import org.example.backend.config.TokenBlacklistService;
 import org.example.backend.model.Role;
@@ -107,7 +106,6 @@ public class AuthController {
 
         Optional<User> userOpt = userRepository.findByLogin(request.getLogin());
 
-
         if (userOpt.isPresent() && BCrypt.checkpw(request.getPassword(), userOpt.get().getPassword())) {
             User user = userOpt.get();
 
@@ -144,7 +142,7 @@ public class AuthController {
                 return ResponseEntity.ok("Logged out successfully");
 
             } catch (Exception e) {
-                // Jeśli token jest już zepsuty/przeterminowany, po prostu go ignorujemy
+                // if expired or broken then skip
                 return ResponseEntity.ok("Already logged out or invalid token");
             }
         }

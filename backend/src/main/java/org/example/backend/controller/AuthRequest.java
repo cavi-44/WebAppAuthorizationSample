@@ -27,7 +27,5 @@ public class AuthRequest {
     public void setTeamId(Long teamId){
         this.teamId = teamId;
     }
-    
-
 }
 

@@ -37,8 +37,6 @@ public class UserController {
         return ResponseEntity.ok(userRepository.findAll());
     }
 
-
-
     @GetMapping("/{id}")
     public ResponseEntity<?> getUserById(@PathVariable Long id) {
         Optional<User> userOpt = userRepository.findById(id);
@@ -55,7 +53,6 @@ public class UserController {
             @PathVariable Long id,
             @RequestBody Map<String, String> payload,
             Authentication authentication) {
-
 
         try {
             boolean isAdmin = rbacService.validateRoles(authentication, "ROLE_ADMIN");
@@ -88,6 +85,7 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
         }
     }
+
     // ONLY FOR ADMIN
     @PutMapping("/{id}/team")
     public ResponseEntity<?> setUserTeam(

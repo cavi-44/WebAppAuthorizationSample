@@ -18,7 +18,7 @@ public class TokenBlacklistInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        // Opcjonalnie: Przepuszczamy żądania OPTIONS (CORS preflight)
+        // optional: can go OPTIONS (CORS preflight)
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             return true;
         }
@@ -30,7 +30,6 @@ public class TokenBlacklistInterceptor implements HandlerInterceptor {
 
 
             if (blacklistService.isBlacklisted(token)) {
-                // Ustawiamy status odpowiedzi na 401 Unauthorized
                 response.setStatus(HttpStatus.UNAUTHORIZED.value());
                 response.getWriter().write("Token has been revoked. Please log in again.");
                 return false;
