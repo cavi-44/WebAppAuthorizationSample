@@ -1,42 +1,24 @@
 import { useState, useEffect, useCallback } from "react";
 import Dashboard from "../components/Dashboard.tsx";
+import LoginForm from "../components/LoginForm.tsx";
+import RegisterForm from "../components/RegisterForm.tsx";
 import api from "./api.ts";
-
-interface User {
-  id: number;
-  login: string;
-  role: { name: string };
-  team: { id: number; name: string } | null;
-}
-
-interface Team {
-  id: number;
-  name: string;
-}
+import type { User, Team } from "./types.ts";
 
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem("jwt_token"));
   const [userProfile, setUserProfile] = useState<User | null>(null);
   const [isRegistering, setIsRegistering] = useState(false);
-
-  // Lists
   const [teams, setTeams] = useState<Team[]>([]);
-
-  // Auth Inputs
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [selectedTeamId, setSelectedTeamId] = useState<number | "">("");
-
-  // UI feedback
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Decode JWT and fetch profile
+  // fetch profile using jwt
   const fetchUserProfile = useCallback(async (jwt: string) => {
     try {
       setLoading(true);
-      // Decode JWT payload (middle section) to get subject (userId)
+      // extract user id from jwt
       const payloadBase64 = jwt.split(".")[1];
       const decodedPayload = JSON.parse(atob(payloadBase64));
       const userId = decodedPayload.sub;
@@ -45,24 +27,19 @@ function App() {
       setUserProfile(res.data);
       setErrorMsg("");
     } catch (err: any) {
-      console.error("Failed to load user profile", err);
-      // Token might be corrupted/expired
+      console.error("failed to load profile", err);
       handleLogout();
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Fetch available teams
   const fetchTeams = async () => {
     try {
       const res = await api.get<Team[]>("/teams");
       setTeams(res.data);
-      if (res.data.length > 0 && selectedTeamId === "") {
-        setSelectedTeamId(res.data[0].id);
-      }
     } catch (err) {
-      console.error("Failed to fetch teams", err);
+      console.error("failed to fetch teams", err);
     }
   };
 
@@ -73,55 +50,39 @@ function App() {
     fetchTeams();
   }, [token, fetchUserProfile]);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!username.trim() || !password.trim()) {
-      setErrorMsg("Wprowadź login i hasło.");
-      return;
-    }
-    
+  const handleLogin = async (usernameInput: string, passwordInput: string) => {
     try {
       setLoading(true);
       setErrorMsg("");
       const res = await api.post<{ token: string }>("/auth/login", {
-        login: username,
-        password,
+        login: usernameInput,
+        password: passwordInput,
       });
 
       const jwt = res.data.token;
       localStorage.setItem("jwt_token", jwt);
       setToken(jwt);
-      setUsername("");
-      setPassword("");
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || "Błędny login lub hasło.");
+      setErrorMsg(err.response?.data?.message || "bledny login lub haslo");
     } finally {
       setLoading(false);
     }
-    
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!username.trim() || !password.trim() || selectedTeamId === "") {
-      setErrorMsg("Wypełnij wszystkie pola formularza.");
-      return;
-    }
-
+  const handleRegister = async (usernameInput: string, passwordInput: string, teamIdInput: number) => {
     try {
       setLoading(true);
       setErrorMsg("");
       await api.post("/auth/register", {
-        login: username,
-        password,
-        teamId: Number(selectedTeamId),
+        login: usernameInput,
+        password: passwordInput,
+        teamId: teamIdInput,
       });
 
-      setSuccessMsg("Konto zarejestrowane pomyślnie! Zaloguj się.");
+      setSuccessMsg("konto zarejestrowane! mozesz sie zalogowac");
       setIsRegistering(false);
-      setPassword("");
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || "Błąd podczas rejestracji.");
+      setErrorMsg(err.response?.data?.message || "blad podczas rejestracji");
     } finally {
       setLoading(false);
     }
@@ -131,16 +92,15 @@ function App() {
     try {
       await api.post("/auth/logout");
     } catch (err) {
-      // Ignore auth logout errors since token is cleared anyway
+      // ignore error, clear state anyway
     }
     localStorage.removeItem("jwt_token");
     setToken(null);
     setUserProfile(null);
-    setSuccessMsg("Wylogowano pomyślnie.");
+    setSuccessMsg("wylogowano pomyslnie");
     setErrorMsg("");
   };
 
-  // Clear messages automatically
   useEffect(() => {
     if (successMsg || errorMsg) {
       const timer = setTimeout(() => {
@@ -167,113 +127,32 @@ function App() {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h1>KIBALL</h1>
-          <p>{isRegistering ? "Tworzenie nowego profilu" : "Dla prawdziwych fanów"}</p>
+          <h1>SHIELD-AUTH</h1>
+          <p>{isRegistering ? "Tworzenie nowego bezpiecznego profilu" : "Dostęp do chronionych zasobów"}</p>
         </div>
 
         {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
         {successMsg && <div className="alert alert-success">{successMsg}</div>}
 
         {isRegistering ? (
-          /* REGISTRATION FORM */
-          <form onSubmit={handleRegister}>
-            <div className="form-group">
-              <label className="form-label">Nazwa konta (login)</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="np. cyber_fan"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Hasło dostępowe</label>
-              <input
-                type="password"
-                className="form-input"
-                placeholder="••••••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Wybierz klub kibica (Drużyna)</label>
-              <select
-                className="form-input"
-                value={selectedTeamId}
-                onChange={(e) => setSelectedTeamId(e.target.value === "" ? "" : Number(e.target.value))}
-                required
-              >
-                <option value="" disabled>Wybierz klub...</option>
-                {teams.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button type="submit" className="btn btn-primary" style={{ width: "100%", marginTop: "10px" }} disabled={loading}>
-              {loading ? "Rejestrowanie..." : "Zarejestruj konto"}
-            </button>
-            <div className="auth-footer">
-              Masz już konto?{" "}
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setIsRegistering(false);
-                  setErrorMsg("");
-                }}
-              >
-                Zaloguj się
-              </a>
-            </div>
-          </form>
+          <RegisterForm
+            onRegister={handleRegister}
+            onSwitchToLogin={() => {
+              setIsRegistering(false);
+              setErrorMsg("");
+            }}
+            teams={teams}
+            loading={loading}
+          />
         ) : (
-          /* LOGIN FORM */
-          <form onSubmit={handleLogin}>
-            <div className="form-group">
-              <label className="form-label">Nazwa konta (login)</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="np. admin"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Hasło</label>
-              <input
-                type="password"
-                className="form-input"
-                placeholder="••••••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <button type="submit" className="btn btn-primary" style={{ width: "100%", marginTop: "10px" }} disabled={loading}>
-              {loading ? "Weryfikacja..." : "Zaloguj"}
-            </button>
-            <div className="auth-footer">
-              Nie posiadasz jeszcze profilu?{" "}
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setIsRegistering(true);
-                  setErrorMsg("");
-                }}
-              >
-                Zarejestruj się
-              </a>
-            </div>
-          </form>
+          <LoginForm
+            onLogin={handleLogin}
+            onSwitchToRegister={() => {
+              setIsRegistering(true);
+              setErrorMsg("");
+            }}
+            loading={loading}
+          />
         )}
       </div>
     </div>

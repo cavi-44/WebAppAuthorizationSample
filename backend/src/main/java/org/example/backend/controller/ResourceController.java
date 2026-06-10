@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -208,9 +209,11 @@ public class ResourceController {
             }
 
             boolean isMod = rbacService.validateRoles(authentication, "ROLE_MOD");
-            Resource resource = abacService.getVisibleResourceOrThrow(id, currentUser, isAdmin);
-
-
+            Optional<Resource> resourceOpt = resourceRepository.findById(id);
+            if (resourceOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Post not found"));
+            }
+            Resource resource = resourceOpt.get();
 
             if (abacService.canDelete(currentUser, resource, isAdmin, isMod)) {
                 resourceRepository.delete(resource);
@@ -219,6 +222,8 @@ public class ResourceController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "No permission to delete this post"));
             }
 
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of("message", e.getReason() != null ? e.getReason() : e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", e.getMessage()));
         }

@@ -81,7 +81,9 @@ public class UserController {
 
             return ResponseEntity.ok(Map.of("message", "Role updated successfully"));
 
-        }catch (Exception e) {
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of("message", e.getReason() != null ? e.getReason() : e.getMessage()));
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
         }
     }
@@ -118,6 +120,8 @@ public class UserController {
             userRepository.save(user);
 
             return ResponseEntity.ok(Map.of("message", "Team updated successfully"));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of("message", e.getReason() != null ? e.getReason() : e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
         }
